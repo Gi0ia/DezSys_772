@@ -20,23 +20,11 @@ import javax.lang.model.util.ElementScanner6;
 public class MOMApplication implements CommandLineRunner  {
 
 	public static void main(String[] args) {
-		SpringApplication.run(MOMApplication.class, args);
-	}
-
-
-	@Override
-	public void run(String... args) throws Exception {
-
-		String flag = new String("receiver");
-		for(String arg:args) {
-			flag = arg;
-		}
-		
-		if ( flag.toLowerCase().equals("sender") )
-			new MOMSender();
-		else
-			new MOMReceiver();
-
+		// run it on 8081 - 8080 is warehouse
+		SpringApplication app = new SpringApplication(MOMApplication.class);
+		app.setDefaultProperties(Collections
+				.singletonMap("server.port", "8081"));
+		app.run(args);
 	}
 
 }
