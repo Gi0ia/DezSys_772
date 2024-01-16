@@ -1,69 +1,56 @@
-package windpark;
-
-
-import org.apache.activemq.ActiveMQConnection;
-import org.apache.activemq.ActiveMQConnectionFactory;
-
-import javax.jms.Connection;
-import javax.jms.ConnectionFactory;
-import javax.jms.DeliveryMode;
-import javax.jms.Destination;
-import javax.jms.MessageProducer;
-import javax.jms.Session;
-import javax.jms.TextMessage;
-
 public class MOMSender {
 
-  private static String user = ActiveMQConnection.DEFAULT_USER;
-  private static String password = ActiveMQConnection.DEFAULT_PASSWORD;
-  private static String url = ActiveMQConnection.DEFAULT_BROKER_URL;
-  private static String subject = "windengine_001";
-	
-  public MOMSender() {
-		
-	  System.out.println( "Sender started." );
+	private static String warehouseUUID = "469d7240-b974-441d-9562-2c56a7b28767";
+	private static String warehouseAPIUrl = "http://localhost:8080/warehouse/" + warehouseUUID + "/data";
 
-	  // Create the connection.
-	  Session session = null;
-	  Connection connection = null;
-	  MessageProducer producer = null;
-	  Destination destination = null;
-			
-	  try {
-	    	
-			ConnectionFactory connectionFactory = new ActiveMQConnectionFactory( user, password, url );
+	private static String user = ActiveMQConnection.DEFAULT_USER;
+	private static String password = ActiveMQConnection.DEFAULT_PASSWORD;
+	private static String url = ActiveMQConnection.DEFAULT_BROKER_URL;
+	private static String queueName = "warehouse-Klosterneuburg";
+
+	public MOMSender() {
+		System.out.println("started Sender,");
+
+		// create a connection to the apacheMQ broker
+		Session session = null;
+		Connection connection = null;
+		MessageProducer producer = null;
+		Destination destination = null;
+		try {
+			// init new connection
+			ConnectionFactory connectionFactory = new ActiveMQConnectionFactory(user, password, url);
 			connection = connectionFactory.createConnection();
 			connection.start();
-		
+
 			// Create the session
 			session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
-			destination = session.createTopic( subject );
-				  
-			// Create the producer.
+			destination = session.createQueue(queueName);
+
+			// Create the producer
 			producer = session.createProducer(destination);
-			producer.setDeliveryMode( DeliveryMode.NON_PERSISTENT );
-			
+			producer.setDeliveryMode(DeliveryMode.NON_PERSISTENT);
+
 			// Create the message
-			TextMessage message = session.createTextMessage( "MaxMustermann [ xxx.xxx.xxx.xxx ]: This message was sent at (ms): " + System.currentTimeMillis() );
+			String currentWarehouseData = consumeWarehouseAPI();
+			TextMessage message = session.createTextMessage(currentWarehouseData);
 			producer.send(message);
-			System.out.println( message.getText() );
+			System.out.println(message.getText());
 
 			connection.stop();
-	      
-	  } catch (Exception e) {
-	  	
-	  	System.out.println("[MessageProducer] Caught: " + e);
-	  	e.printStackTrace();
-	  	
-	  } finally {
-	  	
+
+		} catch (Exception e)   {
+			System.out.println("[MessageProducer] Caught: " + e);
+			e.printStackTrace();
+		} finally {
 			try { producer.close(); } catch ( Exception e ) {}
 			try { session.close(); } catch ( Exception e ) {}
 			try { connection.close(); } catch ( Exception e ) {}
-			
-	  }
-	  System.out.println( "Sender finished." );
-      
-  } // end main
-	
-}
+		}
+		System.out.println("finished Sender.");
+	}
+
+	public static String consumeWarehouseAPI() {
+		System.out.println("Consuming the warehouse API with the url " + warehouseAPIUrl + "...");
+		RestTemplate restTemplate = new RestTemplate();
+		return restTemplate.getForObject(warehouseAPIUrl, String.class);
+	}
